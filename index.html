@@ -25,6 +25,7 @@
             background: white;
             padding: 30px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative;
         }
         
         h1 {
@@ -123,6 +124,58 @@
             background: #555;
         }
         
+        .submit-btn:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+        
+        .message {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            display: none;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #333;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
         @media (max-width: 480px) {
             .container {
                 padding: 20px;
@@ -136,9 +189,23 @@
 </head>
 <body>
     <div class="container">
-        <h1> Request</h1>
+        <h1>Request</h1>
         
-        <form action="https://formspree.io/f/xzzjdlyl" method="POST">
+        <!-- Success/Error Messages -->
+        <div id="success-message" class="message success">
+            Thank you! Your request has been submitted successfully.
+        </div>
+        
+        <div id="error-message" class="message error">
+            Sorry, there was an error submitting your request. Please try again.
+        </div>
+        
+        <!-- Loading Spinner -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+        </div>
+        
+        <form id="request-form" action="https://formspree.io/f/xzzjdlyl" method="POST">
             <!-- Name field -->
             <div class="form-group">
                 <label class="form-label"></label>
@@ -221,7 +288,7 @@
             </div>
             
             <!-- Submit Button -->
-            <button type="submit" class="submit-btn">Send Request</button>
+            <button type="submit" class="submit-btn" id="submit-btn">Send Request</button>
         </form>
     </div>
 
@@ -238,17 +305,62 @@
         // Generate initial CAPTCHA
         generateCaptcha();
         
-        // Form validation
-        document.querySelector('form').addEventListener('submit', function(e) {
+        // Form submission handler
+        document.getElementById('request-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Validate CAPTCHA
             const captchaAnswer = document.getElementById('captcha-answer').value;
             const correctAnswer = document.getElementById('captcha-question').getAttribute('data-answer');
             
             if (parseInt(captchaAnswer) !== parseInt(correctAnswer)) {
-                e.preventDefault();
                 alert('Please solve the CAPTCHA correctly.');
                 generateCaptcha();
                 document.getElementById('captcha-answer').value = '';
+                return;
             }
+            
+            // Show loading spinner and disable submit button
+            document.getElementById('loading').style.display = 'flex';
+            document.getElementById('submit-btn').disabled = true;
+            
+            // Hide any previous messages
+            document.getElementById('success-message').style.display = 'none';
+            document.getElementById('error-message').style.display = 'none';
+            
+            // Get form data
+            const formData = new FormData(this);
+            
+            // Submit form using fetch API
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Show success message
+                    document.getElementById('success-message').style.display = 'block';
+                    // Reset form
+                    this.reset();
+                    // Generate new CAPTCHA
+                    generateCaptcha();
+                } else {
+                    throw new Error('Form submission failed');
+                }
+            })
+            .catch(error => {
+                // Show error message
+                document.getElementById('error-message').style.display = 'block';
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                // Hide loading spinner and enable submit button
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('submit-btn').disabled = false;
+            });
         });
     </script>
 </body>
